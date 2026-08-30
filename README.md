@@ -18,7 +18,7 @@ Sentry capture, and safe Dio redaction. After `Observatory.start`, call
 
 ```yaml
 dependencies:
-  observatory: ^1.0.0
+  observatory: ^1.0.1
 ```
 
 ```bash
