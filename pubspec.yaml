@@ -2,7 +2,7 @@ name: observatory
 description: >-
   Helps Dart applications reach 100% observability coverage.
   Built for incident investigation and isolate-aware workloads.
-version: 1.0.0
+version: 1.0.1
 repository: https://github.com/pchkauu/observatory
 homepage: https://github.com/pchkauu/observatory
 issue_tracker: https://github.com/pchkauu/observatory/issues

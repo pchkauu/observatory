@@ -4,6 +4,8 @@ A Flutter package for incident investigation: isolate-aware Talker logs,
 Sentry capture, and safe Dio redaction. After `Observatory.start`, call
 `record` and `capture` from anywhere in the isolate.
 
+![Observatory architecture, initialization sequence, error sources, and integrations](assets/hero.png)
+
 ## Features
 
 - Talker logs with isolate prefixes (`foreground(main)`)
@@ -16,7 +18,7 @@ Sentry capture, and safe Dio redaction. After `Observatory.start`, call
 
 ```yaml
 dependencies:
-  observatory: ^1.0.0
+  observatory: ^1.0.1
 ```
 
 ```bash
@@ -113,6 +115,8 @@ dropped on `record` only.
 Unhandled errors in `runZoned`, `FlutterError.onError`, and
 `PlatformDispatcher.instance.onError` go to `capture`.
 
+![Observatory record and capture paths, safe Dio redaction, and Sentry enrichment](assets/flow.png)
+
 ## User, device, HTTP
 
 ```dart
@@ -141,6 +145,8 @@ Navigator.of(context).push(
 ## Background isolate
 
 Each isolate has its own singleton. Call `start` again in the worker.
+
+![Observatory foreground and background isolates, observation model, and in-app log screen](assets/safety.png)
 
 ```dart
 Observatory.start(

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.0.1 - 2026-08-30
+
+### Added
+
+- README diagrams for startup flow, `record` vs `capture`, and isolate-aware logs.
+- PNG assets only (`hero`, `flow`, `safety`); HTML sources are not shipped.
+
 ## 1.0.0 - 2026-08-30
 
 ### Added
