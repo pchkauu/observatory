@@ -1,8 +1,8 @@
 name: observatory
 description: >-
-  Helps Dart applications reach 100% observability coverage.
-  Built for incident investigation and isolate-aware workloads.
-version: 1.0.1
+  Isolate-aware Flutter logs, bounded history, safe HTTP logging
+  and Sentry incident capture.
+version: 2.0.0
 repository: https://github.com/pchkauu/observatory
 homepage: https://github.com/pchkauu/observatory
 issue_tracker: https://github.com/pchkauu/observatory/issues
@@ -24,7 +24,6 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_bloc: ^9.1.1
-  package_context: ^2.0.0
   sentry_dio: ^9.28.0
   sentry_flutter: ^9.28.0
   talker: ^5.1.20
