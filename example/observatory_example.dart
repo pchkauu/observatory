@@ -2,18 +2,16 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:observatory/observatory.dart';
-import 'package:talker_flutter/talker_flutter.dart' hide LogLevel;
 
 Future<void> main() async {
-  final talker = TalkerFlutter.init();
-
-  await initPackage(
+  return Observatory.run<void>(
+    thread: ObservatoryThread.foreground,
+    zoneName: 'main',
     config: Config(
       filter: ObservationFilter(
         enabled: true,
         excludedLogs: const [
-          'password',
-          'Authorization',
+          'Heartbeat tick',
         ],
         excludedHttpUrls: [
           RegExp(r'/health$'),
@@ -23,9 +21,6 @@ Future<void> main() async {
         ],
       ),
       httpLog: const HttpLogSpec.detailed(),
-      disabledBlocLogs: const [
-        'HydratedBloc',
-      ],
       sentry: SentrySpec(
         enabled: const String.fromEnvironment('SENTRY_DSN').isNotEmpty,
         appPackageName: 'observatory_example',
@@ -47,30 +42,21 @@ Future<void> main() async {
         appHangTimeoutInterval: const Duration(seconds: 2),
       ),
     ),
-    dependencies: Dependencies(
-      talker: talker,
-    ),
+    body: () async {
+      await Observatory.bindUser(id: 'user-42', email: 'qa@example.com');
+      await Observatory.bindDevice(
+        connectedDeviceId: 'device-7',
+        platformDeviceId: 'pixel-8',
+      );
+
+      final dio = Dio(
+        BaseOptions(baseUrl: 'https://api.example.com'),
+      );
+      Observatory.attachTo(dio);
+
+      runApp(ExampleApp(dio: dio));
+    },
   );
-
-  Observatory.start(
-    thread: ObservatoryThread.foreground,
-    zoneName: 'main',
-  );
-
-  return Observatory.runZoned(() async {
-    await Observatory.bindUser(id: 'user-42', email: 'qa@example.com');
-    await Observatory.bindDevice(
-      connectedDeviceId: 'device-7',
-      platformDeviceId: 'pixel-8',
-    );
-
-    final dio = Dio(
-      BaseOptions(baseUrl: 'https://api.example.com'),
-    );
-    Observatory.attachTo(dio);
-
-    runApp(ExampleApp(dio: dio));
-  });
 }
 
 class ExampleApp extends StatelessWidget {

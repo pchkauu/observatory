@@ -1,18 +1,19 @@
-import 'package:observatory/src/feature/_common/domain/log_level.dart';
-import 'package:observatory/src/feature/_common/domain/policies/observation_filter.dart';
-import 'package:observatory/src/feature/_common/domain/policies/redaction_policy.dart';
-import 'package:package_context/package_context.dart' as package_context;
+import 'package:observatory/src/domain/log_level.dart';
+import 'package:observatory/src/domain/policies/observation_filter.dart';
+import 'package:observatory/src/domain/policies/redaction_policy.dart';
 
-final class Config extends package_context.PackageConfig {
+final class Config {
   final ObservationFilter filter;
   final HttpLogSpec httpLog;
-  final List<String> disabledBlocLogs;
+  final RedactionPolicy redaction;
+  final int historyLimit;
   final SentrySpec sentry;
 
   const Config({
     this.filter = const ObservationFilter.disabled(),
     this.httpLog = const HttpLogSpec(),
-    this.disabledBlocLogs = const [],
+    this.redaction = const RedactionPolicy(),
+    this.historyLimit = 1000,
     this.sentry = const SentrySpec.disabled(),
   });
 }
@@ -20,18 +21,13 @@ final class Config extends package_context.PackageConfig {
 final class HttpLogSpec {
   final bool printHeaders;
   final bool printBody;
-  final RedactionPolicy redaction;
 
   const HttpLogSpec({
     this.printHeaders = false,
     this.printBody = false,
-    this.redaction = const RedactionPolicy(),
   });
 
-  const HttpLogSpec.detailed({
-    this.redaction = const RedactionPolicy(),
-  }) : printHeaders = true,
-       printBody = true;
+  const HttpLogSpec.detailed() : printHeaders = true, printBody = true;
 }
 
 final class SentrySpec {
@@ -94,4 +90,13 @@ final class SentrySpec {
       anrTimeoutInterval = const Duration(seconds: 5),
       enableAppHangTracking = false,
       appHangTimeoutInterval = const Duration(seconds: 2);
+
+  void validate() {
+    if (sampleRate < 0 || sampleRate > 1 || !sampleRate.isFinite) {
+      throw ArgumentError.value(sampleRate, 'sampleRate', 'Must be between 0 and 1');
+    }
+    if (maxBreadcrumbs < 0 || logsMaxBreadcrumbs < 0 || dedupeMaxEntries < 0 || dedupeTtl.isNegative) {
+      throw ArgumentError('Sentry limits must not be negative');
+    }
+  }
 }

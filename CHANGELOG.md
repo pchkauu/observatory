@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2.0.0 - 2026-09-13
+
+### Changed
+
+- Replace package initialization, startup and zone entry with `Observatory.run`.
+- Own one shared Talker per isolate and add `thread(zoneName)` to all connected log sources.
+- Capture `print` and `debugPrint` as ordinary info records; support nested operation zones.
+- Share a bounded, sanitized history between the log screen and Sentry breadcrumbs.
+- Preserve Sentry operation messages and exception chains; deduplicate by identity and location.
+- Move redaction to `Config`; remove `Dependencies`, `package_context` and `disabledBlocLogs`.
+- Make Dio attachment idempotent and restore owned handlers through `Observatory.close`.
+- Keep local logging and application startup available when Sentry initialization fails.
+- Redesign README diagrams around the shared log stream, incident routing and isolate lifecycle.
+
+### Added
+
+- Common URI, header, JSON, FormData and Sentry sanitization with bounded formatting.
+- Regression tests for integration, lifecycle, isolates, privacy and local Sentry transport.
+- GitHub Actions analysis, formatting, tests and package validation.
+
 ## 1.0.1 - 2026-08-30
 
 ### Added
