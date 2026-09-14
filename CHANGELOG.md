@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 3.0.1 - 2026-09-14
+
+### Changed
+
+- Document every public package declaration and member.
+- Adopt automatic trailing-comma formatting across library, test, and example sources.
+
 ## 3.0.0 - 2026-09-14
 
 ### Changed
