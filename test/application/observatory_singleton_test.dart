@@ -103,26 +103,12 @@ void main() {
         return 42;
       },
     );
-    await expectLater(
-      Observatory.run<void>(
-        config: const Config(),
-        zoneName: 'other',
-        body: () {},
-      ),
-      throwsStateError,
-    );
+    await expectLater(Observatory.run<void>(config: const Config(), zoneName: 'other', body: () {}), throwsStateError);
     release.complete();
     expect(await first, 42);
     await Observatory.close();
     expect(Observatory.isStarted, isFalse);
-    expect(
-      await Observatory.run<int>(
-        config: const Config(),
-        zoneName: 'again',
-        body: () => 7,
-      ),
-      7,
-    );
+    expect(await Observatory.run<int>(config: const Config(), zoneName: 'again', body: () => 7), 7);
   });
 
   test('a new run refreshes package context with the next config and clock', () async {
@@ -205,11 +191,7 @@ void main() {
     expect(identical(Bloc.observer, beforeBloc), isTrue);
     expect(identical(dio.httpClientAdapter, originalAdapter), isTrue);
     expect(dio.interceptors, hasLength(1));
-    await Observatory.run<void>(
-      config: const Config(),
-      zoneName: 'main',
-      body: () {},
-    );
+    await Observatory.run<void>(config: const Config(), zoneName: 'main', body: () {});
     void replacement(String? message, {int? wrapWidth}) {}
     debugPrint = replacement;
     await Observatory.close();
@@ -333,11 +315,7 @@ void main() {
   test('invalid limits fail before installing hooks', () {
     final original = debugPrint;
     expect(
-      () => Observatory.run<void>(
-        config: const Config(historyLimit: -1),
-        zoneName: 'main',
-        body: () {},
-      ),
+      () => Observatory.run<void>(config: const Config(historyLimit: -1), zoneName: 'main', body: () {}),
       throwsArgumentError,
     );
     expect(
@@ -385,11 +363,7 @@ void main() {
   });
 
   testWidgets('widgets and navigation use the shared Talker', (tester) async {
-    await Observatory.run<void>(
-      config: const Config(),
-      zoneName: 'main',
-      body: () {},
-    );
+    await Observatory.run<void>(config: const Config(), zoneName: 'main', body: () {});
     await tester.pumpWidget(
       ObservatoryWidget(
         child: MaterialApp(

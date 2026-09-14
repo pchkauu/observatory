@@ -9,12 +9,25 @@ import 'package:talker/talker.dart' as talker;
 
 /// All public Talker entry points reach the same preparation and history path.
 final class ManagedTalker extends talker.Talker implements ObservationLog, ObservationHistory {
+  /// Clock used to timestamp records at receipt.
   final ObservationClock clock;
+
+  /// Resolves launch mode and zone context for new records.
   final IsolateContext Function() context;
+
+  /// Sanitizer used before output and retention.
   final LogSanitizer sanitizer;
+
+  /// Ordinary-log filter shared by connected sources.
   final ObservationFilter observationFilter;
+
+  /// Maximum retained records; zero disables history.
   final int historyLimit;
+
+  /// Console channel that bypasses Observatory print interception.
   final void Function(String) output;
+
+  /// Protected fallback used when log preparation or delivery fails.
   final void Function(String) reportFailure;
   final Queue<_ObservationLog> _records = ListQueue();
   final StreamController<talker.TalkerData> _events = StreamController.broadcast();
@@ -22,6 +35,9 @@ final class ManagedTalker extends talker.Talker implements ObservationLog, Obser
   bool _closed = false;
   bool _consoleEnabled = true;
 
+  /// Creates a Talker with Observatory-owned output and bounded history.
+  ///
+  /// Throws [ArgumentError] when [historyLimit] is negative.
   ManagedTalker({
     required this.clock,
     required this.context,
@@ -34,6 +50,7 @@ final class ManagedTalker extends talker.Talker implements ObservationLog, Obser
     if (historyLimit < 0) throw ArgumentError.value(historyLimit, 'historyLimit');
   }
 
+  /// Creates an observation with context and time captured immediately.
   Observation observation(LogLevel level, String message, {Object? error, StackTrace? stackTrace}) => Observation(
     message: message,
     level: level,
@@ -46,6 +63,9 @@ final class ManagedTalker extends talker.Talker implements ObservationLog, Obser
   @override
   void record(Observation observation) => write(observation, incident: true);
 
+  /// Sanitizes, stores, observes, and optionally prints [observation].
+  ///
+  /// Explicit [incident] records bypass ordinary-log filtering.
   void write(Observation observation, {bool incident = false, String? key, String? title, talker.AnsiPen? pen}) {
     if (_closed || (!settings.enabled && !incident)) return;
     if (!incident && !observationFilter.allowsLog(observation.message)) return;
@@ -208,11 +228,10 @@ final class ManagedTalker extends talker.Talker implements ObservationLog, Obser
     }
     if (settings != null) _consoleEnabled = settings.useConsoleLogs;
     _observer = observer ?? _observer;
-    super.configure(
-      settings: settings?.copyWith(useConsoleLogs: false, useHistory: false),
-    );
+    super.configure(settings: settings?.copyWith(useConsoleLogs: false, useHistory: false));
   }
 
+  /// Clears history, disables logging, and closes the event stream.
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
@@ -237,6 +256,7 @@ final class _ObservationLog extends talker.TalkerLog {
       sanitizer.clip(observation.prefixedMessage);
 }
 
+/// Converts an Observatory [level] to its Talker equivalent.
 talker.LogLevel toTalkerLevel(LogLevel level) => switch (level) {
   LogLevel.verbose => talker.LogLevel.verbose,
   LogLevel.debug => talker.LogLevel.debug,
@@ -246,6 +266,7 @@ talker.LogLevel toTalkerLevel(LogLevel level) => switch (level) {
   LogLevel.critical => talker.LogLevel.critical,
 };
 
+/// Converts a Talker [level] to its Observatory equivalent.
 LogLevel fromTalkerLevel(talker.LogLevel level) => switch (level) {
   talker.LogLevel.verbose => LogLevel.verbose,
   talker.LogLevel.debug => LogLevel.debug,

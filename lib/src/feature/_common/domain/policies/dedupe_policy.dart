@@ -1,19 +1,27 @@
 import 'package:observatory/src/feature/_common/domain/ports/observation_clock.dart';
 
+/// Suppresses matching incident fingerprints within a bounded time window.
 final class DedupePolicy {
+  /// Duration for which a matching fingerprint remains suppressed.
   final Duration ttl;
+
+  /// Maximum number of fingerprints retained in memory.
   final int maxEntries;
+
+  /// Clock used to compare fingerprint timestamps.
   final ObservationClock clock;
   final Map<String, DateTime> _entries = {};
 
-  DedupePolicy({
-    required this.ttl,
-    required this.maxEntries,
-    required this.clock,
-  }) {
+  /// Creates a deduplication policy.
+  ///
+  /// Throws [ArgumentError] when [ttl] or [maxEntries] is negative.
+  DedupePolicy({required this.ttl, required this.maxEntries, required this.clock}) {
     if (ttl.isNegative || maxEntries < 0) throw ArgumentError('Dedupe limits must not be negative');
   }
 
+  /// Returns whether an incident with [fingerprint] should be sent now.
+  ///
+  /// Empty fingerprints and disabled limits are always allowed.
   bool allow(String fingerprint) {
     if (ttl <= Duration.zero || maxEntries < 1) {
       return true;

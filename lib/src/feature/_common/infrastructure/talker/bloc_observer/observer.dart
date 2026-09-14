@@ -6,13 +6,22 @@ import 'package:observatory/src/feature/_common/domain/_barrel.dart';
 import 'package:observatory/src/feature/_common/infrastructure/talker/managed_talker.dart';
 import 'package:talker_bloc_effects/talker_bloc_effects.dart';
 
+/// Routes BLoC lifecycle, failures, and effects through the managed Talker.
 final class ObservatoryBlocObserver extends BlocObserver implements BlocWithEffectsObserver {
+  /// Destination for ordinary BLoC and effect logs.
   final ManagedTalker log;
+
+  /// Exact BLoC type filter applied before effect-specific filtering.
   final ObservationFilter filter;
+
+  /// Incident callback used once for every BLoC failure.
   final Future<void> Function(Observation) capture;
+
+  /// Observer that receives forwarded lifecycle and effect callbacks.
   final BlocObserver previous;
   final TalkerBlocEffectsObserver _logs;
 
+  /// Creates an observer backed by [log] and [effectsSettings].
   ObservatoryBlocObserver({
     required this.log,
     required this.filter,

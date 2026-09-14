@@ -6,9 +6,12 @@ import 'package:domain_error/domain_error.dart';
 import 'package:flutter/services.dart';
 import 'package:observatory/src/feature/_common/domain/_barrel.dart';
 
+/// Extracts stable descriptions and identifiers from supported failures.
 final class FrameworkErrorClassifier {
+  /// Creates a stateless framework error classifier.
   const FrameworkErrorClassifier();
 
+  /// Returns a category description for [error] when possible.
   String? describe(Object? error) {
     if (error == null) {
       return null;
@@ -36,6 +39,9 @@ final class FrameworkErrorClassifier {
     return ErrorIdentity.describeUnknown(error);
   }
 
+  /// Returns the `domain_error` type identifier carried by [error].
+  ///
+  /// Wrapped Dio causes are inspected recursively.
   String? typeIdentifier(Object? error) {
     if (error is DomainError) {
       return error.typeIdentifier;
