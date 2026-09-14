@@ -2,7 +2,7 @@ import 'package:bloc_effects/bloc_effects.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:observatory/observatory.dart';
-import 'package:observatory/src/data/talker/bloc_observer/observer.dart';
+import 'package:observatory/src/feature/_common/infrastructure/talker/bloc_observer/observer.dart';
 import 'package:talker_bloc_effects/talker_bloc_effects.dart';
 
 import '../../support.dart';

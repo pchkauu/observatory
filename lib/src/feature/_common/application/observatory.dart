@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:launch_mode/launch_mode.dart';
-import 'package:observatory/src/application/runtime.dart';
 import 'package:observatory/src/config/config.dart';
-import 'package:observatory/src/domain/_barrel.dart';
+import 'package:observatory/src/feature/_common/application/runtime.dart';
+import 'package:observatory/src/feature/_common/domain/_barrel.dart';
 import 'package:package_context/package_context.dart' as package_context;
 import 'package:talker_flutter/talker_flutter.dart' show Talker;
 

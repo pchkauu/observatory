@@ -1,4 +1,4 @@
-import 'package:observatory/src/domain/observation.dart';
+import 'package:observatory/src/feature/_common/domain/observation.dart';
 
 abstract interface class IncidentSink {
   Future<void> capture(Observation observation);

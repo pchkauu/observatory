@@ -1,5 +1,5 @@
-import 'package:observatory/src/domain/isolate_context.dart';
-import 'package:observatory/src/domain/log_level.dart';
+import 'package:observatory/src/feature/_common/domain/isolate_context.dart';
+import 'package:observatory/src/feature/_common/domain/log_level.dart';
 
 final class Observation {
   final String message;

@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:observatory/observatory.dart';
-import 'package:observatory/src/application/runtime.dart';
+import 'package:observatory/src/feature/_common/application/runtime.dart';
 import 'package:talker/talker.dart' hide LogLevel;
 
 import '../support.dart';

@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:bloc_effects/bloc_effects.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:observatory/src/data/talker/managed_talker.dart';
-import 'package:observatory/src/domain/_barrel.dart';
+import 'package:observatory/src/feature/_common/domain/_barrel.dart';
+import 'package:observatory/src/feature/_common/infrastructure/talker/managed_talker.dart';
 import 'package:talker_bloc_effects/talker_bloc_effects.dart';
 
 final class ObservatoryBlocObserver extends BlocObserver implements BlocWithEffectsObserver {

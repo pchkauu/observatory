@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:observatory/src/domain/policies/redaction_policy.dart';
+import 'package:observatory/src/feature/_common/domain/policies/redaction_policy.dart';
 
 /// Prepares detached, bounded values for local logs and remote events.
 final class LogSanitizer {

@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:observatory/observatory.dart';
-import 'package:observatory/src/data/log_sanitizer.dart';
+import 'package:observatory/src/feature/_common/infrastructure/log_sanitizer.dart';
 
 void main() {
   const sanitizer = LogSanitizer(RedactionPolicy());

@@ -1,4 +1,4 @@
-import 'package:observatory/src/domain/ports/observation_clock.dart';
+import 'package:observatory/src/feature/_common/domain/ports/observation_clock.dart';
 
 final class DedupePolicy {
   final Duration ttl;

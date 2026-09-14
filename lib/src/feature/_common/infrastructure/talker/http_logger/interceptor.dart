@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:observatory/src/config/config.dart';
-import 'package:observatory/src/data/log_sanitizer.dart';
-import 'package:observatory/src/data/talker/managed_talker.dart';
-import 'package:observatory/src/domain/_barrel.dart';
+import 'package:observatory/src/feature/_common/domain/_barrel.dart';
+import 'package:observatory/src/feature/_common/infrastructure/log_sanitizer.dart';
+import 'package:observatory/src/feature/_common/infrastructure/talker/managed_talker.dart';
 import 'package:talker/talker.dart' as talker;
 
 final class SafeDioLogInterceptor extends Interceptor {

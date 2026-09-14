@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:domain_error/domain_error.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:observatory/observatory.dart';
-import 'package:observatory/src/domain/ports/observation_history.dart';
+import 'package:observatory/src/feature/_common/domain/ports/observation_history.dart';
 import 'package:sentry_dio/sentry_dio.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 

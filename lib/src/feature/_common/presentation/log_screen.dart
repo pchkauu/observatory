@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:observatory/src/application/observatory.dart';
+import 'package:observatory/src/feature/_common/application/observatory.dart';
 import 'package:talker_flutter/talker_flutter.dart';
 
 class ObservatoryLogScreen extends StatelessWidget {

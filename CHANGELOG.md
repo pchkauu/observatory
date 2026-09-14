@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replace `ObservatoryThread` and the `thread` startup argument with automatic `launch_mode` detection.
 - Use `SentryFlutter.init` for foreground work and `Sentry.init` for background and computational isolates.
 - Make `Config` a `PackageConfig` and refresh internal package context across runtime restarts.
+- Reorganize package internals under `feature/_common` by application, domain, infrastructure, and presentation.
 - Upgrade `domain_error` to 3.0.0 and retain its `cause` and `typeIdentifier` data.
 - Upgrade `package_context` to 2.2.0.
 

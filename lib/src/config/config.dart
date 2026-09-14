@@ -1,6 +1,6 @@
-import 'package:observatory/src/domain/log_level.dart';
-import 'package:observatory/src/domain/policies/observation_filter.dart';
-import 'package:observatory/src/domain/policies/redaction_policy.dart';
+import 'package:observatory/src/feature/_common/domain/log_level.dart';
+import 'package:observatory/src/feature/_common/domain/policies/observation_filter.dart';
+import 'package:observatory/src/feature/_common/domain/policies/redaction_policy.dart';
 import 'package:package_context/package_context.dart' as package_context;
 import 'package:talker_bloc_effects/talker_bloc_effects.dart';
 

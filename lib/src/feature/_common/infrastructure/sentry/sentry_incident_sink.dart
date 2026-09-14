@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:launch_mode/launch_mode.dart';
 import 'package:observatory/src/config/config.dart';
-import 'package:observatory/src/data/error_classifier.dart';
-import 'package:observatory/src/data/log_sanitizer.dart';
-import 'package:observatory/src/domain/_barrel.dart';
+import 'package:observatory/src/feature/_common/domain/_barrel.dart';
+import 'package:observatory/src/feature/_common/infrastructure/error_classifier.dart';
+import 'package:observatory/src/feature/_common/infrastructure/log_sanitizer.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 final class SentryIncidentSink implements IncidentSink {
