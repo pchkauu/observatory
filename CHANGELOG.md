@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 3.0.2 - 2026-09-14
+
+### Fixed
+
+- Match Talker Flutter's `dart:developer.log` output on iOS and macOS, avoiding the extra `flutter:` prefix while
+  retaining isolate context on every line.
+
 ## 3.0.1 - 2026-09-14
 
 ### Changed
