@@ -1,34 +1,33 @@
 import 'dart:async';
 
-import 'package:observatory/src/domain/observatory_thread.dart';
+import 'package:launch_mode/launch_mode.dart';
 
 final class IsolateContext {
   static const Symbol contextKey = #observatoryContext;
-  static const Symbol threadKey = #observatoryThread;
   static const Symbol zoneNameKey = #observatoryZoneName;
 
-  final ObservatoryThread thread;
+  final LaunchModeType launchMode;
   final String zoneName;
 
-  String get prefix => '${thread.name}($zoneName)';
+  String get prefix => '${launchMode.name}($zoneName)';
 
   String format(String message) => message.split('\n').map((line) => '$prefix: $line').join('\n');
 
   const IsolateContext({
-    required this.thread,
+    required this.launchMode,
     required this.zoneName,
   });
 
-  const IsolateContext.unspecified() : thread = ObservatoryThread.unspecified, zoneName = 'unspecified';
+  const IsolateContext.unspecified() : launchMode = LaunchModeType.unspecified, zoneName = 'unspecified';
 
   factory IsolateContext.fromZone([Zone? zone, IsolateContext fallback = const IsolateContext.unspecified()]) {
     final current = zone ?? Zone.current;
     final provider = current[contextKey];
     final base = provider is IsolateContext Function() ? provider() : fallback;
-    final thread = current[threadKey];
+    final detectedMode = current.run(() => LaunchMode.current);
     final zoneName = current[zoneNameKey];
     return IsolateContext(
-      thread: thread is ObservatoryThread ? thread : base.thread,
+      launchMode: detectedMode == LaunchModeType.unspecified ? base.launchMode : detectedMode,
       zoneName: zoneName is String && zoneName.isNotEmpty ? normalizeZoneName(zoneName) : base.zoneName,
     );
   }

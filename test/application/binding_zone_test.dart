@@ -7,7 +7,6 @@ void main() {
     try {
       await Observatory.run<void>(
         config: const Config(),
-        thread: ObservatoryThread.foreground,
         zoneName: 'main',
         body: () {
           expect(WidgetsBinding.instance.debugCheckZone('run body'), isTrue);
@@ -16,7 +15,6 @@ void main() {
       await Observatory.close();
       await Observatory.run<void>(
         config: const Config(),
-        thread: ObservatoryThread.foreground,
         zoneName: 'restart',
         body: () {
           expect(WidgetsBinding.instance.debugCheckZone('restarted body'), isTrue);

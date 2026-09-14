@@ -21,10 +21,10 @@ void main() {
     await runZoned(
       () => Observatory.run<void>(
         config: const Config(),
-        thread: ObservatoryThread.foreground,
         zoneName: ' main ',
         body: () async {
           expect(Observatory.isStarted, isTrue);
+          expect(LaunchMode.current, LaunchModeType.foreground);
           // ignore: avoid_print
           print('printed\nsecond line');
           debugPrint('debug printed');
@@ -53,7 +53,6 @@ void main() {
   test('queued debug messages retain origin across zones and every wrapped line has context', () async {
     await Observatory.run<void>(
       config: const Config(),
-      thread: ObservatoryThread.foreground,
       zoneName: 'main',
       body: () async {
         Observatory.talker.configure(settings: TalkerSettings(useConsoleLogs: false));
@@ -73,11 +72,31 @@ void main() {
     );
   });
 
+  test('background scope changes launch mode without changing neighboring foreground work', () async {
+    await Observatory.run<void>(
+      config: const Config(),
+      zoneName: 'main',
+      body: () async {
+        Observatory.talker.configure(settings: TalkerSettings(useConsoleLogs: false));
+        await LaunchMode.withBackgroundMode(
+          () => Observatory.runInZone('push', () async {
+            await Future<void>.delayed(Duration.zero);
+            Observatory.talker.info('background task');
+          }),
+        );
+        Observatory.talker.info('foreground task');
+      },
+    );
+    expect(Observatory.talker.history.map((entry) => entry.message), [
+      'background(push): background task',
+      'foreground(main): foreground task',
+    ]);
+  });
+
   test('concurrent and repeated runs reject; close allows another run', () async {
     final release = Completer<void>();
     final first = Observatory.run<int>(
       config: const Config(),
-      thread: ObservatoryThread.foreground,
       zoneName: 'main',
       body: () async {
         await release.future;
@@ -87,7 +106,6 @@ void main() {
     await expectLater(
       Observatory.run<void>(
         config: const Config(),
-        thread: ObservatoryThread.foreground,
         zoneName: 'other',
         body: () {},
       ),
@@ -100,7 +118,6 @@ void main() {
     expect(
       await Observatory.run<int>(
         config: const Config(),
-        thread: ObservatoryThread.foreground,
         zoneName: 'again',
         body: () => 7,
       ),
@@ -108,12 +125,42 @@ void main() {
     );
   });
 
+  test('a new run refreshes package context with the next config and clock', () async {
+    final firstClock = MutableClock()..value = DateTime.utc(2026, 9, 14, 1);
+    await Observatory.run<void>(
+      config: const Config(historyLimit: 1),
+      zoneName: 'first',
+      clock: firstClock,
+      body: () {
+        Observatory.talker
+          ..info('discarded')
+          ..info('retained');
+      },
+    );
+    expect(Observatory.talker.history, hasLength(1));
+    expect(Observatory.talker.history.single.time, firstClock.value);
+    await Observatory.close();
+
+    final secondClock = MutableClock()..value = DateTime.utc(2026, 9, 14, 2);
+    await Observatory.run<void>(
+      config: const Config(historyLimit: 2),
+      zoneName: 'second',
+      clock: secondClock,
+      body: () {
+        Observatory.talker
+          ..info('first')
+          ..info('second');
+      },
+    );
+    expect(Observatory.talker.history, hasLength(2));
+    expect(Observatory.talker.history.last.time, secondClock.value);
+  });
+
   test('body errors return the original object and stack without hanging', () async {
     final error = StateError('body');
     final stack = StackTrace.fromString('original stack');
     final future = Observatory.run<void>(
       config: const Config(),
-      thread: ObservatoryThread.foreground,
       zoneName: 'main',
       body: () async {
         await Future<void>.delayed(Duration.zero);
@@ -142,7 +189,6 @@ void main() {
     final originalAdapter = dio.httpClientAdapter;
     await Observatory.run<void>(
       config: const Config(),
-      thread: ObservatoryThread.foreground,
       zoneName: 'main',
       body: () {
         Observatory.attachTo(dio);
@@ -161,7 +207,6 @@ void main() {
     expect(dio.interceptors, hasLength(1));
     await Observatory.run<void>(
       config: const Config(),
-      thread: ObservatoryThread.foreground,
       zoneName: 'main',
       body: () {},
     );
@@ -177,9 +222,10 @@ void main() {
     var called = false;
     final runtime = ObservatoryRuntime(
       config: Config(sentry: sentrySpec()),
-      isolate: const IsolateContext(thread: ObservatoryThread.foreground, zoneName: 'main'),
+      isolate: const IsolateContext(launchMode: LaunchModeType.foreground, zoneName: 'main'),
       clock: MutableClock(),
-      initializeSentry: (_, {required background}) async {
+      initializeSentry: (_, {required launchMode}) async {
+        expect(launchMode, LaunchModeType.foreground);
         throw StateError('startup');
       },
     );
@@ -214,9 +260,9 @@ void main() {
     final transport = RecordingTransport();
     final runtime = ObservatoryRuntime(
       config: Config(sentry: sentrySpec(attachLogs: false)),
-      isolate: const IsolateContext(thread: ObservatoryThread.foreground, zoneName: 'main'),
+      isolate: const IsolateContext(launchMode: LaunchModeType.foreground, zoneName: 'main'),
       clock: MutableClock(),
-      initializeSentry: (sink, {required background}) => initializeTestSentry(sink, transport, flutterHooks: true),
+      initializeSentry: (sink, {required launchMode}) => initializeTestSentry(sink, transport, flutterHooks: true),
     );
     try {
       await runtime.run<void>(() async {
@@ -267,9 +313,9 @@ void main() {
     var bodyCalled = false;
     final runtime = ObservatoryRuntime(
       config: Config(sentry: sentrySpec()),
-      isolate: const IsolateContext(thread: ObservatoryThread.foreground, zoneName: 'main'),
+      isolate: const IsolateContext(launchMode: LaunchModeType.foreground, zoneName: 'main'),
       clock: MutableClock(),
-      initializeSentry: (_, {required background}) => initialize.future,
+      initializeSentry: (_, {required launchMode}) => initialize.future,
     );
     final run = runtime.run<void>(() {
       bodyCalled = true;
@@ -289,7 +335,6 @@ void main() {
     expect(
       () => Observatory.run<void>(
         config: const Config(historyLimit: -1),
-        thread: ObservatoryThread.foreground,
         zoneName: 'main',
         body: () {},
       ),
@@ -298,7 +343,6 @@ void main() {
     expect(
       () => Observatory.run<void>(
         config: Config(sentry: sentrySpec(logsLimit: -1)),
-        thread: ObservatoryThread.foreground,
         zoneName: 'main',
         body: () {},
       ),
@@ -311,7 +355,6 @@ void main() {
   test('unawaited zone errors are captured once with the originating context', () async {
     await Observatory.run<void>(
       config: const Config(),
-      thread: ObservatoryThread.foreground,
       zoneName: 'main',
       body: () async {
         Observatory.runInZone('timer', () {
@@ -335,10 +378,15 @@ void main() {
     expect(Observatory.isStarted, isFalse);
   });
 
+  test('separate computational isolate detects isolate mode automatically', () async {
+    final messages = await Isolate.run(_worker).timeout(const Duration(seconds: 5));
+    expect(messages, ['isolate(worker): worker log']);
+    expect(Observatory.isStarted, isFalse);
+  });
+
   testWidgets('widgets and navigation use the shared Talker', (tester) async {
     await Observatory.run<void>(
       config: const Config(),
-      thread: ObservatoryThread.foreground,
       zoneName: 'main',
       body: () {},
     );
@@ -358,20 +406,32 @@ void main() {
   });
 }
 
-Future<List<String?>> _background() async {
+Future<List<String?>> _worker() async {
   await Observatory.run<void>(
     config: const Config(),
-    thread: ObservatoryThread.background,
-    zoneName: 'downloads',
-    body: () {
-      // ignore: avoid_print
-      print('background print');
-      Observatory.talker.info('background talker');
-    },
+    zoneName: 'worker',
+    body: () => Observatory.talker.info('worker log'),
   );
   final messages = Observatory.talker.history.map((entry) => entry.message).toList();
   await Observatory.close();
   return messages;
+}
+
+Future<List<String?>> _background() async {
+  return LaunchMode.withBackgroundMode(() async {
+    await Observatory.run<void>(
+      config: const Config(),
+      zoneName: 'downloads',
+      body: () {
+        // ignore: avoid_print
+        print('background print');
+        Observatory.talker.info('background talker');
+      },
+    );
+    final messages = Observatory.talker.history.map((entry) => entry.message).toList();
+    await Observatory.close();
+    return messages;
+  });
 }
 
 final class FailingObserver extends TalkerObserver {

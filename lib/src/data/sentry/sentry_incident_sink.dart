@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:launch_mode/launch_mode.dart';
 import 'package:observatory/src/config/config.dart';
 import 'package:observatory/src/data/error_classifier.dart';
 import 'package:observatory/src/data/log_sanitizer.dart';
@@ -67,12 +68,12 @@ final class SentryIncidentSink implements IncidentSink {
       final isolate = _eventContext(event);
       event.tags = {
         ...?event.tags,
-        'thread': isolate.thread.name,
+        'thread': isolate.launchMode.name,
         'zoneName': isolate.zoneName,
         'failure.type_identifier': ?identity,
       };
       event.contexts['observatory'] = {
-        'thread': isolate.thread.name,
+        'thread': isolate.launchMode.name,
         'zoneName': isolate.zoneName,
         'location': ?location,
       };
@@ -98,7 +99,7 @@ final class SentryIncidentSink implements IncidentSink {
                 level: _toSentryLevel(log.level),
                 timestamp: log.time,
                 category: 'observatory',
-                data: {'thread': log.isolate.thread.name, 'zoneName': log.isolate.zoneName},
+                data: {'thread': log.isolate.launchMode.name, 'zoneName': log.isolate.zoneName},
               ),
             ),
           );
@@ -120,7 +121,7 @@ final class SentryIncidentSink implements IncidentSink {
         level: event.level,
         message: SentryMessage(sanitizer.text(event.message?.formatted ?? 'Incident details unavailable')),
         transaction: event.transaction == null ? null : sanitizer.text(event.transaction!),
-        tags: {'thread': isolate.thread.name, 'zoneName': isolate.zoneName, 'observatory.preparation': 'failed'},
+        tags: {'thread': isolate.launchMode.name, 'zoneName': isolate.zoneName, 'observatory.preparation': 'failed'},
         exceptions: event.exceptions
             ?.map(
               (entry) => SentryException(
@@ -170,7 +171,7 @@ final class SentryIncidentSink implements IncidentSink {
         prepared.message = isolate.format(
           sanitizer.boundedMessage(prepared.message ?? '', prefixLength: isolate.prefix.length + 2),
         );
-        prepared.data = {...?existing, 'thread': isolate.thread.name, 'zoneName': isolate.zoneName};
+        prepared.data = {...?existing, 'thread': isolate.launchMode.name, 'zoneName': isolate.zoneName};
       }
       return prepared;
     } on Object {
@@ -254,7 +255,7 @@ final class SentryIncidentSink implements IncidentSink {
     final zoneName = event.tags?['zoneName'];
     final fallback = context();
     return IsolateContext(
-      thread: ObservatoryThread.values.where((value) => value.name == thread).firstOrNull ?? fallback.thread,
+      launchMode: LaunchModeType.values.where((value) => value.name == thread).firstOrNull ?? fallback.launchMode,
       zoneName: zoneName ?? fallback.zoneName,
     );
   }
@@ -287,7 +288,7 @@ final class SentryIncidentSink implements IncidentSink {
         throwable: observation.error,
         timestamp: observation.time,
         level: _toSentryLevel(observation.level),
-        tags: {'thread': observation.isolate.thread.name, 'zoneName': observation.isolate.zoneName},
+        tags: {'thread': observation.isolate.launchMode.name, 'zoneName': observation.isolate.zoneName},
       ),
       stackTrace: observation.stackTrace,
     );

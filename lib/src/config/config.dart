@@ -1,10 +1,13 @@
 import 'package:observatory/src/domain/log_level.dart';
 import 'package:observatory/src/domain/policies/observation_filter.dart';
 import 'package:observatory/src/domain/policies/redaction_policy.dart';
+import 'package:package_context/package_context.dart' as package_context;
+import 'package:talker_bloc_effects/talker_bloc_effects.dart';
 
-final class Config {
+final class Config extends package_context.PackageConfig {
   final ObservationFilter filter;
   final HttpLogSpec httpLog;
+  final TalkerBlocEffectsSettings blocEffects;
   final RedactionPolicy redaction;
   final int historyLimit;
   final SentrySpec sentry;
@@ -12,6 +15,7 @@ final class Config {
   const Config({
     this.filter = const ObservationFilter.disabled(),
     this.httpLog = const HttpLogSpec(),
+    this.blocEffects = const TalkerBlocEffectsSettings(),
     this.redaction = const RedactionPolicy(),
     this.historyLimit = 1000,
     this.sentry = const SentrySpec.disabled(),

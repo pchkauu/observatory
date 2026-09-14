@@ -1,27 +1,67 @@
 import 'dart:async';
 
+import 'package:bloc_effects/bloc_effects.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:observatory/src/data/talker/managed_talker.dart';
 import 'package:observatory/src/domain/_barrel.dart';
-import 'package:talker_bloc_logger/talker_bloc_logger.dart';
+import 'package:talker_bloc_effects/talker_bloc_effects.dart';
 
-final class ObservatoryBlocObserver extends BlocObserver {
+final class ObservatoryBlocObserver extends BlocObserver implements BlocWithEffectsObserver {
   final ManagedTalker log;
   final ObservationFilter filter;
   final Future<void> Function(Observation) capture;
   final BlocObserver previous;
-  final TalkerBlocObserver _logs;
+  final TalkerBlocEffectsObserver _logs;
 
-  ObservatoryBlocObserver({required this.log, required this.filter, required this.capture, required this.previous})
-    : _logs = TalkerBlocObserver(
-        talker: log,
-        settings: const TalkerBlocLoggerSettings(printChanges: true, printCreations: true, printClosings: true),
-      );
+  ObservatoryBlocObserver({
+    required this.log,
+    required this.filter,
+    required TalkerBlocEffectsSettings effectsSettings,
+    required this.capture,
+    required this.previous,
+  }) : _logs = TalkerBlocEffectsObserver(
+         talker: log,
+         settings: const TalkerBlocLoggerSettings(printChanges: true, printCreations: true, printClosings: true),
+         effectsSettings: TalkerBlocEffectsSettings(
+           enabled: effectsSettings.enabled,
+           printEffectFullData: effectsSettings.printEffectFullData,
+           effectFilter: (bloc, effect) {
+             if (bloc != null && !_allowsBloc(filter, bloc)) return false;
+             return effectsSettings.effectFilter?.call(bloc, effect) ?? true;
+           },
+         ),
+       );
 
-  bool _allows(BlocBase<dynamic> bloc) {
-    // Matching by name is the public filter contract; obfuscated names need host-specific filters.
-    // ignore: avoid_type_to_string, no_runtimeType_toString
-    return filter.allowsBlocType(bloc.runtimeType.toString());
+  bool _allows(BlocBase<dynamic> bloc) => _allowsBloc(filter, bloc);
+
+  @override
+  void onBlocEffect(BlocBase<dynamic> bloc, Object? effect) {
+    try {
+      // ignore: invalid_use_of_protected_member
+      _logs.onBlocEffect(bloc, effect);
+    } on Object {
+      log.reportFailure('Bloc effect logging failed');
+    }
+    final previous = this.previous;
+    if (previous is BlocWithEffectsObserver) {
+      // ignore: invalid_use_of_protected_member
+      previous.onBlocEffect(bloc, effect);
+    }
+  }
+
+  @override
+  void onEffect<E>(E effect) {
+    try {
+      // ignore: invalid_use_of_protected_member
+      _logs.onEffect(effect);
+    } on Object {
+      log.reportFailure('Bloc effect logging failed');
+    }
+    final previous = this.previous;
+    if (previous is BlocWithEffectsObserver) {
+      // ignore: invalid_use_of_protected_member
+      previous.onEffect<E>(effect);
+    }
   }
 
   @override
@@ -76,4 +116,10 @@ final class ObservatoryBlocObserver extends BlocObserver {
     previous.onTransition(bloc, transition);
     if (_allows(bloc)) _logs.onTransition(bloc, transition);
   }
+}
+
+bool _allowsBloc(ObservationFilter filter, BlocBase<dynamic> bloc) {
+  // Matching by name is the public filter contract; obfuscated names need host-specific filters.
+  // ignore: avoid_type_to_string, no_runtimeType_toString
+  return filter.allowsBlocType(bloc.runtimeType.toString());
 }

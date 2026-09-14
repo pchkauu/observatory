@@ -20,7 +20,7 @@ void main() {
     sink
       ..applyFlutterOptions(flutter)
       ..applyBackgroundOptions(dart);
-    expect(flutter.release, 'mobile@2.0.0');
+    expect(flutter.release, 'mobile@3.0.0');
     expect(flutter.dist, '1');
     expect(flutter.attachScreenshot, isTrue);
     expect(flutter.privacy.maskAllText, isTrue);
@@ -126,7 +126,7 @@ void main() {
         message: 'no exception',
         level: LogLevel.warning,
         time: time,
-        isolate: const IsolateContext(thread: ObservatoryThread.background, zoneName: 'sync'),
+        isolate: const IsolateContext(launchMode: LaunchModeType.background, zoneName: 'sync'),
       ),
     );
     await sink.capture(
@@ -134,7 +134,7 @@ void main() {
         message: 'failed operation',
         level: LogLevel.error,
         time: time,
-        isolate: const IsolateContext(thread: ObservatoryThread.background, zoneName: 'sync'),
+        isolate: const IsolateContext(launchMode: LaunchModeType.background, zoneName: 'sync'),
         error: StateError('original cause'),
         stackTrace: StackTrace.fromString('#0 refresh (package:mobile/sync.dart:12:3)'),
       ),
@@ -314,7 +314,7 @@ SentryEvent event({int line = 12, String message = 'sync profile', Object? throw
 );
 
 final class SignatureFailure extends DomainError {
-  const SignatureFailure({super.message});
+  const SignatureFailure({super.message, super.cause});
   @override
   String get typeIdentifier => 'SignatureFailure';
 }

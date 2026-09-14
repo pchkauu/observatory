@@ -5,7 +5,6 @@ import 'package:observatory/observatory.dart';
 
 Future<void> main() async {
   return Observatory.run<void>(
-    thread: ObservatoryThread.foreground,
     zoneName: 'main',
     config: Config(
       filter: ObservationFilter(

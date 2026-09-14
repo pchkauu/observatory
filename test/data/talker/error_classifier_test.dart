@@ -13,7 +13,7 @@ void main() {
 
   group('FrameworkErrorClassifier', () {
     test('adds failure type identifier to log messages', () {
-      const failure = _SignatureFailure(message: 'signature mismatch');
+      const failure = _SignatureFailure(message: 'signature mismatch', cause: FormatException('raw failure'));
 
       final formatted = ErrorIdentity.formatLogMessage(
         'Sync failed',
@@ -24,6 +24,7 @@ void main() {
 
       expect(formatted, contains('Sync failed'));
       expect(formatted, contains('failure.type_identifier=SignatureFailure'));
+      expect(failure.cause, isA<FormatException>());
     });
 
     test('uses stable names for common non-failure errors', () {
@@ -52,5 +53,6 @@ final class _SignatureFailure extends DomainError {
 
   const _SignatureFailure({
     super.message,
+    super.cause,
   });
 }

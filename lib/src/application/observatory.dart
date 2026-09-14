@@ -2,28 +2,40 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
+import 'package:launch_mode/launch_mode.dart';
 import 'package:observatory/src/application/runtime.dart';
 import 'package:observatory/src/config/config.dart';
 import 'package:observatory/src/domain/_barrel.dart';
+import 'package:package_context/package_context.dart' as package_context;
 import 'package:talker_flutter/talker_flutter.dart' show Talker;
 
 /// One logging runtime per isolate. Run each isolate's entry point through [run].
 abstract final class Observatory {
   static ObservatoryRuntime? _runtime;
+  static final _packageContext = package_context.PackageContext<Config, _RuntimeDependencies>();
   static ObservatoryRuntime get _instance => _runtime ?? (throw StateError('Observatory.run() was not called'));
 
   static Future<T> run<T>({
     required Config config,
-    required ObservatoryThread thread,
     required String zoneName,
     required FutureOr<T> Function() body,
     ObservationClock clock = const SystemObservationClock(),
   }) {
     if (_runtime != null) return Future.error(StateError('Observatory is already running'));
+    LaunchMode.initializeAutomatically();
+    final graph = package_context.PackageGraph(config: config, dependencies: _RuntimeDependencies(clock));
+    if (_packageContext.isInitialized) {
+      _packageContext.refresh(graph);
+    } else {
+      _packageContext.initialize(graph);
+    }
     final runtime = ObservatoryRuntime(
-      config: config,
-      clock: clock,
-      isolate: IsolateContext(thread: thread, zoneName: IsolateContext.normalizeZoneName(zoneName)),
+      config: _packageContext.config,
+      clock: _packageContext.dependencies.clock,
+      isolate: IsolateContext(
+        launchMode: LaunchMode.current,
+        zoneName: IsolateContext.normalizeZoneName(zoneName),
+      ),
     );
     _runtime = runtime;
     return runtime.run(body);
@@ -61,4 +73,10 @@ abstract final class Observatory {
     await runtime.close();
     if (identical(_runtime, runtime)) _runtime = null;
   }
+}
+
+final class _RuntimeDependencies extends package_context.PackageDependencies {
+  final ObservationClock clock;
+
+  const _RuntimeDependencies(this.clock);
 }

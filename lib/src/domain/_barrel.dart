@@ -2,7 +2,6 @@ export 'error_identity.dart';
 export 'isolate_context.dart';
 export 'log_level.dart';
 export 'observation.dart';
-export 'observatory_thread.dart';
 export 'policies/dedupe_policy.dart';
 export 'policies/observation_filter.dart';
 export 'policies/redaction_policy.dart';

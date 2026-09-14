@@ -26,7 +26,7 @@ ManagedTalker createLog({
   void Function(String)? reportFailure,
 }) => ManagedTalker(
   clock: MutableClock(),
-  context: () => const IsolateContext(thread: ObservatoryThread.foreground, zoneName: 'main'),
+  context: () => const IsolateContext(launchMode: LaunchModeType.foreground, zoneName: 'main'),
   sanitizer: const LogSanitizer(RedactionPolicy()),
   observationFilter: filter,
   historyLimit: limit,
@@ -45,7 +45,7 @@ SentrySpec sentrySpec({
   appPackageName: 'mobile',
   dsn: dsn,
   environment: 'test',
-  release: 'mobile@2.0.0',
+  release: 'mobile@3.0.0',
   dist: '1',
   sampleRate: 1,
   attachScreenshot: true,
@@ -77,7 +77,7 @@ SentryIncidentSink createSink({
       clock: clock ?? MutableClock(),
     ),
     sanitizer: const LogSanitizer(RedactionPolicy()),
-    context: () => const IsolateContext(thread: ObservatoryThread.foreground, zoneName: 'main'),
+    context: () => const IsolateContext(launchMode: LaunchModeType.foreground, zoneName: 'main'),
     reportFailure: reportFailure ?? (_) {},
     preferFileLine: true,
   );
