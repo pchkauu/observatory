@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:observatory/src/domain/_barrel.dart';
+import 'package:observatory/src/feature/_common/domain/_barrel.dart';
 
 void main() {
   group('IsolateContext', () {

@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:observatory/src/application/observatory.dart';
+import 'package:observatory/src/feature/_common/application/observatory.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 class ObservatoryWidget extends StatelessWidget {

@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:domain_error/domain_error.dart';
 import 'package:flutter/services.dart';
-import 'package:observatory/src/domain/_barrel.dart';
+import 'package:observatory/src/feature/_common/domain/_barrel.dart';
 
 final class FrameworkErrorClassifier {
   const FrameworkErrorClassifier();

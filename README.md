@@ -10,13 +10,12 @@ the log screen, exported text and breadcrumbs. Multiline entries prefix every li
 
 ```yaml
 dependencies:
-  observatory: ^2.0.0
+  observatory: ^3.0.0
 ```
 
 ```dart
 Future<void> main() => Observatory.run<void>(
   config: const Config(),
-  thread: ObservatoryThread.foreground,
   zoneName: 'main',
   body: () {
     final dio = Dio();
@@ -37,6 +36,10 @@ Observatory creates the Flutter binding and runs `body` in the same zone. Call i
 creating a binding yourself. `isStarted` means local logging is ready; `isSentryEnabled`
 reports whether remote capture initialized successfully. Failed Sentry initialization
 leaves local logging available and still runs the application.
+
+`Observatory.run` initializes `launch_mode` automatically. Native and web root isolates use
+`foreground`; computational isolates use `isolate`. The detected mode remains the external
+`thread` value in logs and Sentry data.
 
 The result of `body` becomes the result of `run`. An exception in `body` is captured and
 returned with its original stack. The runtime stays active after `body` returns, including
@@ -72,16 +75,21 @@ error preparation; replacing those with `talker.configure` is unsupported. Obser
 Each background isolate needs its own entry point:
 
 ```dart
-Future<void> worker() => Observatory.run<void>(
-  config: const Config(),
-  thread: ObservatoryThread.background,
-  zoneName: 'downloads',
-  body: () async {
-    print('Worker ready');
-    await downloadFiles();
-  },
+Future<void> worker() => LaunchMode.withBackgroundMode(
+  () => Observatory.run<void>(
+    config: const Config(),
+    zoneName: 'downloads',
+    body: () async {
+      print('Worker ready');
+      await downloadFiles();
+    },
+  ),
 );
 ```
+
+Wrap a background root engine handler with `LaunchMode.withBackgroundMode`. The scoped mode
+survives `await` without changing neighboring foreground work. `runInZone` changes only
+`zoneName`.
 
 `print` interception covers the runtime zone and its descendants. Logs before startup,
 other Talker instances, direct `stdout`, arbitrary `dart:developer.log` calls and native
@@ -139,6 +147,22 @@ free of unknown secrets. `RedactionPolicy.disabled()` is an explicit opt-out fro
 `attachTo` is idempotent for each Dio. Bloc errors are captured once; other Bloc callbacks
 and navigation use the common history.
 
+Configure `bloc_effects` logging through the same Talker:
+
+```dart
+Config(
+  blocEffects: TalkerBlocEffectsSettings(
+    printEffectFullData: false,
+    effectFilter: (bloc, effect) => effect is! HeartbeatEffect,
+  ),
+)
+```
+
+Effects and full data are enabled by default. `excludedBlocTypes` runs first for Bloc/Cubit
+sources, followed by `effectFilter`, then message formatting. Effect records use the
+`bloc-effect` key and retain the originating launch mode and zone. Create Bloc, Cubit and
+standalone effect sources after `Observatory.run` installs its observer.
+
 `ObservationFilter` filters ordinary records by message substring, HTTP URL regular expression
 and exact Bloc type name. It does not suppress explicit or uncaught incidents. Bloc name
 filters must account for obfuscation in the host application.
@@ -166,6 +190,14 @@ wrappers, clears history and restores previous Flutter/platform/debugPrint/Bloc 
 Handlers replaced by the host after startup are preserved. The host still owns its Dio
 clients. Close the runtime when an isolate's work is complete or during test cleanup;
 a later `run` can initialize it again.
+
+## Migrate from 2.x
+
+1. Remove the `thread` argument from `Observatory.run`; launch mode is detected automatically.
+2. Replace `ObservatoryThread` and `IsolateContext.thread` references with `LaunchModeType` and
+   `IsolateContext.launchMode`.
+3. Wrap background root engine handlers with `LaunchMode.withBackgroundMode`.
+4. Configure effect logging with `Config.blocEffects`; `Config` now extends `PackageConfig`.
 
 ## Migrate from 1.x
 

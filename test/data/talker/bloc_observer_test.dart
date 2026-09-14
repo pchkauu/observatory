@@ -1,7 +1,9 @@
+import 'package:bloc_effects/bloc_effects.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:observatory/observatory.dart';
-import 'package:observatory/src/data/talker/bloc_observer/observer.dart';
+import 'package:observatory/src/feature/_common/infrastructure/talker/bloc_observer/observer.dart';
+import 'package:talker_bloc_effects/talker_bloc_effects.dart';
 
 import '../../support.dart';
 
@@ -13,6 +15,7 @@ void main() {
     final observer = ObservatoryBlocObserver(
       log: log,
       filter: const ObservationFilter.disabled(),
+      effectsSettings: const TalkerBlocEffectsSettings(),
       previous: previous,
       capture: (observation) async {
         log.record(observation);
@@ -45,6 +48,7 @@ void main() {
         excludedHttpUrls: [],
         excludedBlocTypes: ['CounterBloc'],
       ),
+      effectsSettings: const TalkerBlocEffectsSettings(),
       previous: CountingObserver(),
       capture: (observation) async {
         log.record(observation);
@@ -62,6 +66,118 @@ void main() {
     expect(log.history, hasLength(1));
     expect(captured, hasLength(1));
     await bloc.close();
+  });
+
+  test('effects use settings, keep context and forward every emission to the previous observer', () async {
+    final log = createLog();
+    final previous = CountingEffectsObserver();
+    final seen = <Object?>[];
+    final original = Bloc.observer;
+    Bloc.observer = ObservatoryBlocObserver(
+      log: log,
+      filter: const ObservationFilter.disabled(),
+      effectsSettings: TalkerBlocEffectsSettings(
+        printEffectFullData: false,
+        effectFilter: (bloc, effect) {
+          seen.add(effect);
+          return effect != 'skip';
+        },
+      ),
+      previous: previous,
+      capture: (_) async {},
+    );
+    try {
+      final cubit = EffectCubit()
+        ..send('saved')
+        ..send('saved')
+        ..send('skip')
+        ..send(null);
+      final bloc = EffectBloc()..send('from bloc');
+      final effects = log.history.where((entry) => entry.key == BlocEffectLog.logKey).toList();
+      expect(effects, hasLength(4));
+      expect(effects.every((entry) => entry.message!.startsWith('foreground(main): ')), isTrue);
+      expect(effects.first.message, contains('String'));
+      expect(effects[2].message, contains('Null'));
+      expect(seen, ['saved', 'saved', 'skip', null, 'from bloc']);
+      expect(previous.effects, ['saved', 'saved', 'skip', null, 'from bloc']);
+      await cubit.close();
+      await bloc.close();
+    } finally {
+      Bloc.observer = original;
+    }
+  });
+
+  test('exact Bloc filter runs before effect filter and settings can disable effects', () async {
+    final log = createLog();
+    final original = Bloc.observer;
+    Bloc.observer = ObservatoryBlocObserver(
+      log: log,
+      filter: const ObservationFilter(
+        enabled: true,
+        excludedLogs: [],
+        excludedHttpUrls: [],
+        excludedBlocTypes: ['EffectCubit'],
+      ),
+      effectsSettings: TalkerBlocEffectsSettings(
+        effectFilter: (_, _) => throw StateError('must not run'),
+      ),
+      previous: CountingObserver(),
+      capture: (_) async {},
+    );
+    try {
+      final cubit = EffectCubit()..send(_ThrowingEffect());
+      expect(log.history.where((entry) => entry.key == BlocEffectLog.logKey), isEmpty);
+      await cubit.close();
+    } finally {
+      Bloc.observer = original;
+    }
+
+    ObservatoryBlocObserver(
+      log: log,
+      filter: const ObservationFilter.disabled(),
+      effectsSettings: const TalkerBlocEffectsSettings(enabled: false),
+      previous: CountingObserver(),
+      capture: (_) async {},
+    ).onEffect('hidden');
+    expect(log.history.where((entry) => entry.key == BlocEffectLog.logKey), isEmpty);
+  });
+
+  test('plain effects are logged and formatting failures do not escape', () async {
+    final failures = <String>[];
+    final log = createLog(reportFailure: failures.add);
+    final original = Bloc.observer;
+    Bloc.observer = ObservatoryBlocObserver(
+      log: log,
+      filter: const ObservationFilter.disabled(),
+      effectsSettings: const TalkerBlocEffectsSettings(),
+      previous: CountingObserver(),
+      capture: (_) async {},
+    );
+    try {
+      final source = PlainEffects()
+        ..send('plain')
+        ..send(_ThrowingEffect());
+      final effects = log.history.where((entry) => entry.key == BlocEffectLog.logKey).toList();
+      expect(effects, hasLength(1));
+      expect(effects.single.message, contains('Effect emitted'));
+      expect(effects.single.message, contains('plain'));
+      expect(failures, ['Bloc effect logging failed']);
+      await source.close();
+
+      final filteringObserver = ObservatoryBlocObserver(
+        log: log,
+        filter: const ObservationFilter.disabled(),
+        effectsSettings: TalkerBlocEffectsSettings(
+          effectFilter: (_, _) => throw StateError('filter'),
+        ),
+        previous: CountingObserver(),
+        capture: (_) async {},
+      );
+      expect(() => filteringObserver.onEffect('filtered'), returnsNormally);
+      expect(failures, ['Bloc effect logging failed', 'Bloc effect logging failed']);
+    } finally {
+      Bloc.observer = original;
+    }
   });
 }
 
@@ -112,4 +228,45 @@ final class CountingObserver extends BlocObserver {
     super.onTransition(bloc, transition);
     calls++;
   }
+}
+
+final class CountingEffectsObserver extends BlocWithEffectsObserver {
+  final List<Object?> effects = [];
+
+  @override
+  void onEffect<E>(E effect) {
+    super.onEffect(effect);
+    effects.add(effect);
+  }
+}
+
+final class EffectCubit extends CubitWithEffects<int, Object?> {
+  EffectCubit() : super(0);
+
+  void send(Object? effect) => emitEffect(effect);
+}
+
+final class EffectBloc extends BlocWithEffects<int, int, Object?> {
+  EffectBloc() : super(0);
+
+  void send(Object? effect) => emitEffect(effect);
+}
+
+final class PlainEffects extends _Closable with Effects<Object?> {
+  void send(Object? effect) => emitEffect(effect);
+}
+
+class _Closable implements Closable {
+  bool _closed = false;
+
+  @override
+  bool get isClosed => _closed;
+
+  @override
+  Future<void> close() async => _closed = true;
+}
+
+final class _ThrowingEffect {
+  @override
+  String toString() => throw StateError('format');
 }

@@ -5,13 +5,14 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:launch_mode/launch_mode.dart';
 import 'package:observatory/src/config/config.dart';
-import 'package:observatory/src/data/log_sanitizer.dart';
-import 'package:observatory/src/data/sentry/sentry_incident_sink.dart';
-import 'package:observatory/src/data/talker/bloc_observer/observer.dart';
-import 'package:observatory/src/data/talker/http_logger/interceptor.dart';
-import 'package:observatory/src/data/talker/managed_talker.dart';
-import 'package:observatory/src/domain/_barrel.dart';
+import 'package:observatory/src/feature/_common/domain/_barrel.dart';
+import 'package:observatory/src/feature/_common/infrastructure/log_sanitizer.dart';
+import 'package:observatory/src/feature/_common/infrastructure/sentry/sentry_incident_sink.dart';
+import 'package:observatory/src/feature/_common/infrastructure/talker/bloc_observer/observer.dart';
+import 'package:observatory/src/feature/_common/infrastructure/talker/http_logger/interceptor.dart';
+import 'package:observatory/src/feature/_common/infrastructure/talker/managed_talker.dart';
 import 'package:sentry_dio/sentry_dio.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:talker_flutter/talker_flutter.dart' show TalkerRouteObserver;
@@ -25,7 +26,7 @@ final class ObservatoryRuntime {
   final IsolateContext isolate;
   final ObservationClock clock;
   final Zone parentZone = Zone.current;
-  final Future<void> Function(SentryIncidentSink, {required bool background})? initializeSentry;
+  final Future<void> Function(SentryIncidentSink, {required LaunchModeType launchMode})? initializeSentry;
   final Completer<void> _initialized = Completer<void>();
   final Map<Dio, _DioAttachment> _attachments = Map.identity();
   final Set<Future<void>> _pending = {};
@@ -48,7 +49,7 @@ final class ObservatoryRuntime {
     reportFailure: reportFailure,
   );
   late final List<NavigatorObserver> navigatorObservers = List.unmodifiable([
-    if (sentryActive) SentryNavigatorObserver(),
+    if (isolate.launchMode == LaunchModeType.foreground && sentryActive) SentryNavigatorObserver(),
     TalkerRouteObserver(talker),
   ]);
   late final Zone zone;
@@ -70,6 +71,9 @@ final class ObservatoryRuntime {
 
   ObservatoryRuntime({required this.config, required this.isolate, required this.clock, this.initializeSentry}) {
     if (config.historyLimit < 0) throw ArgumentError.value(config.historyLimit, 'historyLimit');
+    if (isolate.launchMode == LaunchModeType.unspecified) {
+      throw ArgumentError.value(isolate.launchMode, 'launchMode', 'Must be initialized');
+    }
     config.sentry.validate();
   }
 
@@ -78,7 +82,7 @@ final class ObservatoryRuntime {
   Future<T> run<T>(FutureOr<T> Function() body) {
     final result = Completer<T>();
     var ownsBindingZone = false;
-    if (isolate.thread == ObservatoryThread.foreground) {
+    if (isolate.launchMode == LaunchModeType.foreground) {
       try {
         WidgetsBinding.instance;
       } on Object {
@@ -183,13 +187,13 @@ final class ObservatoryRuntime {
       talker.write(talker.observation(LogLevel.info, wrapped));
     };
     debugPrint = _printHook;
-    if (isolate.thread == ObservatoryThread.foreground) {
+    if (isolate.launchMode == LaunchModeType.foreground) {
       if (config.sentry.enabled) {
         SentryWidgetsFlutterBinding.ensureInitialized();
       } else {
         WidgetsFlutterBinding.ensureInitialized();
       }
-    } else if (isolate.thread == ObservatoryThread.background) {
+    } else if (isolate.launchMode == LaunchModeType.background) {
       DartPluginRegistrant.ensureInitialized();
     }
     if (config.sentry.enabled) {
@@ -198,11 +202,16 @@ final class ObservatoryRuntime {
         _ownsSentry = true;
         final initialize = initializeSentry;
         if (initialize != null) {
-          await initialize(sink, background: isolate.thread == ObservatoryThread.background);
-        } else if (isolate.thread == ObservatoryThread.background) {
-          await Sentry.init(sink.applyBackgroundOptions);
+          await initialize(sink, launchMode: isolate.launchMode);
         } else {
-          await SentryFlutter.init(sink.applyFlutterOptions);
+          switch (isolate.launchMode) {
+            case LaunchModeType.foreground:
+              await SentryFlutter.init(sink.applyFlutterOptions);
+            case LaunchModeType.background || LaunchModeType.isolate:
+              await Sentry.init(sink.applyBackgroundOptions);
+            case LaunchModeType.unspecified:
+              throw StateError('Launch mode is not initialized');
+          }
         }
         sentryActive = Sentry.isEnabled;
       } on Object {
@@ -219,7 +228,7 @@ final class ObservatoryRuntime {
         );
       }
     }
-    if (isolate.thread == ObservatoryThread.foreground) {
+    if (isolate.launchMode == LaunchModeType.foreground) {
       _previousFlutter = FlutterError.onError;
       _flutterHook = (details) {
         // The saved Sentry handler owns remote capture; this wrapper adds only the local record.
@@ -237,7 +246,13 @@ final class ObservatoryRuntime {
       PlatformDispatcher.instance.onError = _platformHook;
     }
     _previousBloc = Bloc.observer;
-    _blocHook = ObservatoryBlocObserver(log: talker, filter: config.filter, capture: capture, previous: _previousBloc!);
+    _blocHook = ObservatoryBlocObserver(
+      log: talker,
+      filter: config.filter,
+      effectsSettings: config.blocEffects,
+      capture: capture,
+      previous: _previousBloc!,
+    );
     Bloc.observer = _blocHook;
     started = true;
   }
@@ -292,7 +307,7 @@ final class ObservatoryRuntime {
     await _initialized.future;
     started = false;
     if (identical(debugPrint, _printHook)) debugPrint = _previousPrint;
-    if (isolate.thread == ObservatoryThread.foreground) {
+    if (isolate.launchMode == LaunchModeType.foreground) {
       if (identical(FlutterError.onError, _flutterHook)) FlutterError.onError = _previousFlutter;
       if (identical(PlatformDispatcher.instance.onError, _platformHook)) {
         PlatformDispatcher.instance.onError = _previousPlatform;

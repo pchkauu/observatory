@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:observatory/observatory.dart';
-import 'package:observatory/src/data/log_sanitizer.dart';
-import 'package:observatory/src/data/talker/http_logger/interceptor.dart';
+import 'package:observatory/src/feature/_common/infrastructure/log_sanitizer.dart';
+import 'package:observatory/src/feature/_common/infrastructure/talker/http_logger/interceptor.dart';
 import 'package:talker/talker.dart' as talker;
 
 import '../../support.dart';

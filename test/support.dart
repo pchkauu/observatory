@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:observatory/observatory.dart';
-import 'package:observatory/src/data/log_sanitizer.dart';
-import 'package:observatory/src/data/sentry/sentry_incident_sink.dart';
-import 'package:observatory/src/data/talker/managed_talker.dart';
-import 'package:observatory/src/domain/ports/observation_history.dart';
+import 'package:observatory/src/feature/_common/domain/ports/observation_history.dart';
+import 'package:observatory/src/feature/_common/infrastructure/log_sanitizer.dart';
+import 'package:observatory/src/feature/_common/infrastructure/sentry/sentry_incident_sink.dart';
+import 'package:observatory/src/feature/_common/infrastructure/talker/managed_talker.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 // Exercise the SDK Flutter hook directly without native initialization.
 // ignore: implementation_imports
@@ -26,7 +26,7 @@ ManagedTalker createLog({
   void Function(String)? reportFailure,
 }) => ManagedTalker(
   clock: MutableClock(),
-  context: () => const IsolateContext(thread: ObservatoryThread.foreground, zoneName: 'main'),
+  context: () => const IsolateContext(launchMode: LaunchModeType.foreground, zoneName: 'main'),
   sanitizer: const LogSanitizer(RedactionPolicy()),
   observationFilter: filter,
   historyLimit: limit,
@@ -45,7 +45,7 @@ SentrySpec sentrySpec({
   appPackageName: 'mobile',
   dsn: dsn,
   environment: 'test',
-  release: 'mobile@2.0.0',
+  release: 'mobile@3.0.0',
   dist: '1',
   sampleRate: 1,
   attachScreenshot: true,
@@ -77,7 +77,7 @@ SentryIncidentSink createSink({
       clock: clock ?? MutableClock(),
     ),
     sanitizer: const LogSanitizer(RedactionPolicy()),
-    context: () => const IsolateContext(thread: ObservatoryThread.foreground, zoneName: 'main'),
+    context: () => const IsolateContext(launchMode: LaunchModeType.foreground, zoneName: 'main'),
     reportFailure: reportFailure ?? (_) {},
     preferFileLine: true,
   );
