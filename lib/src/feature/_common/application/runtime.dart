@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:ui';
 
 import 'package:dio/dio.dart';
@@ -37,6 +38,7 @@ final class ObservatoryRuntime {
 
   /// Optional Sentry initializer used to replace SDK startup in tests.
   final Future<void> Function(SentryIncidentSink, {required LaunchModeType launchMode})? initializeSentry;
+  final void Function(String) _developerLog;
   final Completer<void> _initialized = Completer<void>();
   final Map<Dio, _DioAttachment> _attachments = Map.identity();
   final Set<Future<void>> _pending = {};
@@ -96,7 +98,13 @@ final class ObservatoryRuntime {
   /// Creates an unstarted runtime.
   ///
   /// Throws [ArgumentError] for invalid history, Sentry, or launch-mode values.
-  ObservatoryRuntime({required this.config, required this.isolate, required this.clock, this.initializeSentry}) {
+  ObservatoryRuntime({
+    required this.config,
+    required this.isolate,
+    required this.clock,
+    this.initializeSentry,
+    void Function(String)? developerLog,
+  }) : _developerLog = developerLog ?? _writeDeveloperLog {
     if (config.historyLimit < 0) throw ArgumentError.value(config.historyLimit, 'historyLimit');
     if (isolate.launchMode == LaunchModeType.unspecified) {
       throw ArgumentError.value(isolate.launchMode, 'launchMode', 'Must be initialized');
@@ -197,7 +205,15 @@ final class ObservatoryRuntime {
     return base.fork(zoneValues: {IsolateContext.zoneNameKey: IsolateContext.normalizeZoneName(zoneName)}).run(body);
   }
 
-  void _output(String message) => parentZone.print(message);
+  void _output(String message) {
+    if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS)) {
+      _developerLog(message);
+      return;
+    }
+    parentZone.print(message);
+  }
+
+  static void _writeDeveloperLog(String message) => developer.log(message, name: 'Talker');
 
   /// Writes an internal telemetry failure without re-entering capture.
   void reportFailure(String message) {
