@@ -118,9 +118,7 @@ void main() {
         excludedHttpUrls: [],
         excludedBlocTypes: ['EffectCubit'],
       ),
-      effectsSettings: TalkerBlocEffectsSettings(
-        effectFilter: (_, _) => throw StateError('must not run'),
-      ),
+      effectsSettings: TalkerBlocEffectsSettings(effectFilter: (_, _) => throw StateError('must not run')),
       previous: CountingObserver(),
       capture: (_) async {},
     );
@@ -167,9 +165,7 @@ void main() {
       final filteringObserver = ObservatoryBlocObserver(
         log: log,
         filter: const ObservationFilter.disabled(),
-        effectsSettings: TalkerBlocEffectsSettings(
-          effectFilter: (_, _) => throw StateError('filter'),
-        ),
+        effectsSettings: TalkerBlocEffectsSettings(effectFilter: (_, _) => throw StateError('filter')),
         previous: CountingObserver(),
         capture: (_) async {},
       );

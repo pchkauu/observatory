@@ -1,4 +1,6 @@
+/// Defines sensitive keys that are masked before data leaves its source.
 final class RedactionPolicy {
+  /// Default case-insensitive HTTP header names to mask.
   static const defaultSensitiveHeaders = [
     'Authorization',
     'Proxy-Authorization',
@@ -11,6 +13,7 @@ final class RedactionPolicy {
     'X-Firebase-Token',
   ];
 
+  /// Default normalized URI, JSON, and FormData key fragments to mask.
   static const defaultSensitiveBodyKeys = [
     'token',
     'apiKey',
@@ -29,18 +32,26 @@ final class RedactionPolicy {
     'cookie',
   ];
 
+  /// Whether masking is active.
   final bool enabled;
+
+  /// Case-insensitive HTTP header names to mask.
   final List<String> sensitiveHeaders;
+
+  /// Normalized URI, JSON, and FormData key fragments to mask.
   final List<String> sensitiveBodyKeys;
 
+  /// Creates an enabled redaction policy with safe defaults.
   const RedactionPolicy({
     this.enabled = true,
     this.sensitiveHeaders = defaultSensitiveHeaders,
     this.sensitiveBodyKeys = defaultSensitiveBodyKeys,
   });
 
+  /// Creates an explicit policy that performs no masking.
   const RedactionPolicy.disabled() : enabled = false, sensitiveHeaders = const [], sensitiveBodyKeys = const [];
 
+  /// Returns whether the HTTP header [key] must be masked.
   bool isSensitiveHeader(String key) {
     if (!enabled) {
       return false;
@@ -50,6 +61,7 @@ final class RedactionPolicy {
     });
   }
 
+  /// Returns whether the structured payload [key] must be masked.
   bool isSensitiveBodyKey(String key) {
     if (!enabled) {
       return false;

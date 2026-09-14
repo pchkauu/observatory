@@ -7,18 +7,32 @@ import 'package:observatory/src/feature/_common/domain/policies/redaction_policy
 
 /// Prepares detached, bounded values for local logs and remote events.
 final class LogSanitizer {
+  /// Maximum traversal depth for structured values.
   static const maxDepth = 8;
+
+  /// Maximum structured elements visited per value.
   static const maxElements = 1000;
+
+  /// Maximum rendered characters per prepared value.
   static const maxLength = 16384;
+
+  /// Marker substituted for sensitive values.
   static const redacted = '<redacted>';
+
+  /// Marker appended when a configured bound is reached.
   static const truncated = '<truncated>';
+
+  /// Redaction rules applied during preparation.
   final RedactionPolicy policy;
 
+  /// Creates a sanitizer backed by [policy].
   const LogSanitizer(this.policy);
 
+  /// Limits [value] to [maxLength] characters with a truncation marker.
   String clip(String value) =>
       value.length <= maxLength ? value : '${value.substring(0, maxLength - truncated.length)}$truncated';
 
+  /// Limits a multiline [message] while reserving [prefixLength] per line.
   String boundedMessage(String message, {required int prefixLength}) {
     final result = StringBuffer();
     var renderedLength = 0;
@@ -42,6 +56,7 @@ final class LogSanitizer {
     return result.toString();
   }
 
+  /// Sanitizes recognizable URI, JSON, and key-value data in [value].
   String text(String value) {
     var result = clip(value);
     if (!policy.enabled) return result;
@@ -74,21 +89,24 @@ final class LogSanitizer {
     return clip(result);
   }
 
+  /// Returns a copy of [value] with credentials and sensitive queries masked.
   Uri uri(Uri value) {
     if (!policy.enabled) return value;
     return value.replace(
       userInfo: value.userInfo.isEmpty ? '' : redacted,
       queryParameters: value.hasQuery
           ? value.queryParametersAll.map(
-              (key, values) => MapEntry(
-                key,
-                policy.isSensitiveBodyKey(key) || policy.isSensitiveHeader(key) ? [redacted] : values,
-              ),
+              (key, values) =>
+                  MapEntry(key, policy.isSensitiveBodyKey(key) || policy.isSensitiveHeader(key) ? [redacted] : values),
             )
           : null,
     );
   }
 
+  /// Creates a detached, sanitized representation of structured [source].
+  ///
+  /// Cycles, excessive depth, and excessive element counts use explicit
+  /// markers. The input object is never mutated.
   Object? value(Object? source) {
     final active = HashSet<Object>.identity();
     var remaining = maxElements;
@@ -172,6 +190,7 @@ final class LogSanitizer {
     }
   }
 
+  /// Encodes a detached sanitized [source] as bounded indented JSON.
   String encode(Object? source) {
     try {
       return clip(const JsonEncoder.withIndent('  ').convert(value(source)));

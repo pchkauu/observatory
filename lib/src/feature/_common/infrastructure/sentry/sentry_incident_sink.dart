@@ -8,16 +8,35 @@ import 'package:observatory/src/feature/_common/infrastructure/error_classifier.
 import 'package:observatory/src/feature/_common/infrastructure/log_sanitizer.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+/// Adapts prepared Observatory incidents and identity data to Sentry.
 final class SentryIncidentSink implements IncidentSink {
+  /// Sentry behavior and limits.
   final SentrySpec spec;
+
+  /// Local history used to build optional breadcrumbs.
   final ObservationHistory history;
+
+  /// Error classifier used for stable type metadata.
   final FrameworkErrorClassifier classifier;
+
+  /// Policy that suppresses matching incident fingerprints.
   final DedupePolicy dedupe;
+
+  /// Sanitizer shared by event, breadcrumb, and span preparation.
   final LogSanitizer sanitizer;
+
+  /// Resolves context when incoming SDK data has none.
   final IsolateContext Function() context;
+
+  /// Reports preparation failures through the protected local channel.
   final void Function(String) reportFailure;
+
+  /// Whether source coordinates take priority over function names.
   final bool preferFileLine;
 
+  /// Creates a Sentry sink from runtime policies and services.
+  ///
+  /// [preferFileLine] defaults to release-mode behavior.
   SentryIncidentSink({
     required this.spec,
     required this.history,
@@ -29,6 +48,7 @@ final class SentryIncidentSink implements IncidentSink {
     bool? preferFileLine,
   }) : preferFileLine = preferFileLine ?? kReleaseMode;
 
+  /// Applies shared and Flutter-specific values to [options].
   void applyFlutterOptions(SentryFlutterOptions options) {
     applyBackgroundOptions(options);
     options
@@ -40,6 +60,7 @@ final class SentryIncidentSink implements IncidentSink {
       ..appHangTimeoutInterval = spec.appHangTimeoutInterval;
   }
 
+  /// Applies shared values and preparation callbacks to [options].
   void applyBackgroundOptions(SentryOptions options) {
     options
       ..dsn = spec.dsn
@@ -56,6 +77,9 @@ final class SentryIncidentSink implements IncidentSink {
       ..beforeBreadcrumb = (breadcrumb, hint) => _breadcrumb(breadcrumb);
   }
 
+  /// Sanitizes, enriches, and deduplicates [event] before delivery.
+  ///
+  /// Returns `null` when the event matches an active deduplication entry.
   Future<SentryEvent?> beforeSend(SentryEvent event, Hint hint) async {
     try {
       final identity =
@@ -134,6 +158,7 @@ final class SentryIncidentSink implements IncidentSink {
     }
   }
 
+  /// Sanitizes transaction fields and spans before delivery.
   Future<SentryTransaction?> beforeSendTransaction(SentryTransaction event, Hint hint) async {
     try {
       _sanitizeEvent(event);
@@ -295,10 +320,7 @@ final class SentryIncidentSink implements IncidentSink {
   }
 
   @override
-  Future<void> bindUser({
-    String? id,
-    String? email,
-  }) async {
+  Future<void> bindUser({String? id, String? email}) async {
     if (!spec.enabled || (id == null && email == null)) {
       return;
     }
@@ -325,10 +347,7 @@ final class SentryIncidentSink implements IncidentSink {
   }
 
   @override
-  Future<void> bindDevice({
-    String? connectedDeviceId,
-    String? platformDeviceId,
-  }) async {
+  Future<void> bindDevice({String? connectedDeviceId, String? platformDeviceId}) async {
     if (!spec.enabled) {
       return;
     }

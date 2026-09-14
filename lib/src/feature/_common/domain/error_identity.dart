@@ -1,13 +1,30 @@
+/// Detached stack-frame fields used for stable error location selection.
 final class StackFrameView {
+  /// Whether the source SDK classified this as an application frame.
   final bool inApp;
+
+  /// Package name reported for the frame.
   final String? package;
+
+  /// Module name reported for the frame.
   final String? module;
+
+  /// Absolute source path reported for the frame.
   final String? absPath;
+
+  /// Source filename reported for the frame.
   final String? fileName;
+
+  /// Function name reported for the frame.
   final String? function;
+
+  /// One-based source line when available.
   final int? lineNo;
+
+  /// One-based source column when available.
   final int? colNo;
 
+  /// Creates a detached view from optional stack-frame fields.
   const StackFrameView({
     this.inApp = false,
     this.package,
@@ -20,13 +37,10 @@ final class StackFrameView {
   });
 }
 
+/// Builds stable error metadata and source locations.
 abstract final class ErrorIdentity {
-  static String formatLogMessage(
-    String message, {
-    Object? error,
-    String? describedType,
-    String? typeIdentifier,
-  }) {
+  /// Adds available error type metadata to [message] once.
+  static String formatLogMessage(String message, {Object? error, String? describedType, String? typeIdentifier}) {
     final metadata = <String>[
       if (describedType != null && describedType.isNotEmpty) 'error.type=$describedType',
       if (typeIdentifier != null && typeIdentifier.isNotEmpty) 'failure.type_identifier=$typeIdentifier',
@@ -40,6 +54,7 @@ abstract final class ErrorIdentity {
     return '$message\n${metadata.join('\n')}';
   }
 
+  /// Returns a useful first-line description for an otherwise unknown [error].
   static String? describeUnknown(Object? error) {
     if (error == null) {
       return null;
@@ -51,6 +66,7 @@ abstract final class ErrorIdentity {
     return description.split('\n').first.trim();
   }
 
+  /// Whether [function] is too short or generic for a stable identity.
   static bool looksObfuscatedOrGeneric(String function) {
     final f = function.trim();
     if (f.isEmpty) {
@@ -65,6 +81,10 @@ abstract final class ErrorIdentity {
     return RegExp(r'^[A-Za-z0-9]{1,3}$').hasMatch(f);
   }
 
+  /// Selects the nearest useful application location from [frames].
+  ///
+  /// Application frames are preferred. When [preferFileLine] is true, source
+  /// coordinates take priority over function names.
   static String? locationFrom({
     required List<StackFrameView> frames,
     required String appPackageName,
@@ -123,6 +143,7 @@ abstract final class ErrorIdentity {
     return null;
   }
 
+  /// Returns a usable operation name or `null` for empty default values.
   static String? fallbackOperation(String? operation) {
     final op = operation?.trim();
     if (op == null || op.isEmpty || op == 'default') {

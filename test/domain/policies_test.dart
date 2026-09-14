@@ -6,10 +6,7 @@ void main() {
     test('normalizes empty and long zone names', () {
       expect(IsolateContext.normalizeZoneName('  '), 'unspecified');
       expect(IsolateContext.normalizeZoneName(' a\nb '), 'a b');
-      expect(
-        IsolateContext.normalizeZoneName('abcdefghijklmnopqrstuvwxyz'),
-        'abcdefghijklmnopqrst',
-      );
+      expect(IsolateContext.normalizeZoneName('abcdefghijklmnopqrstuvwxyz'), 'abcdefghijklmnopqrst');
     });
   });
 
@@ -47,11 +44,7 @@ void main() {
     });
     test('drops repeats inside ttl and allows after expiry', () {
       final clock = _MutableClock(DateTime.utc(2026));
-      final policy = DedupePolicy(
-        ttl: const Duration(minutes: 1),
-        maxEntries: 10,
-        clock: clock,
-      );
+      final policy = DedupePolicy(ttl: const Duration(minutes: 1), maxEntries: 10, clock: clock);
 
       expect(policy.allow('StateError:Bad state'), isTrue);
       expect(policy.allow('StateError:Bad state'), isFalse);
@@ -67,10 +60,7 @@ void main() {
         'Sync failed\nerror.type=DioException',
       );
       expect(
-        ErrorIdentity.formatLogMessage(
-          'Sync failed\nerror.type=DioException',
-          describedType: 'DioException',
-        ),
+        ErrorIdentity.formatLogMessage('Sync failed\nerror.type=DioException', describedType: 'DioException'),
         'Sync failed\nerror.type=DioException',
       );
     });
@@ -99,14 +89,7 @@ void main() {
     test('reads a readable in-app location from frames', () {
       expect(
         ErrorIdentity.locationFrom(
-          frames: const [
-            StackFrameView(
-              inApp: true,
-              fileName: 'sync.dart',
-              function: 'refresh',
-              lineNo: 12,
-            ),
-          ],
+          frames: const [StackFrameView(inApp: true, fileName: 'sync.dart', function: 'refresh', lineNo: 12)],
           appPackageName: 'mobile',
           preferFileLine: false,
         ),

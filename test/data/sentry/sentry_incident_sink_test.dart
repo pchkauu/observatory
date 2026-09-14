@@ -234,13 +234,7 @@ void main() {
     expect(breadcrumb.message!.length, lessThanOrEqualTo(16384));
     expect(breadcrumb.message!.split('\n').every((line) => line.startsWith('foreground(main): ')), isTrue);
     expect(options.recordHttpBreadcrumbs, isFalse);
-    expect(
-      options.beforeBreadcrumb!(
-        RouteObserverBreadcrumb(navigationType: 'push'),
-        Hint(),
-      ),
-      isNull,
-    );
+    expect(options.beforeBreadcrumb!(RouteObserverBreadcrumb(navigationType: 'push'), Hint()), isNull);
   });
 
   test('SDK transport preserves Dio cause chain and original HTTP data', () async {

@@ -2,24 +2,35 @@ import 'dart:async';
 
 import 'package:launch_mode/launch_mode.dart';
 
+/// Launch-mode and zone metadata captured when an event enters Observatory.
 final class IsolateContext {
+  /// Zone key that provides the active runtime context.
   static const Symbol contextKey = #observatoryContext;
+
+  /// Zone key that overrides the operation name for nested work.
   static const Symbol zoneNameKey = #observatoryZoneName;
 
+  /// Detected launch mode for the event origin.
   final LaunchModeType launchMode;
+
+  /// Normalized operation-zone name.
   final String zoneName;
 
+  /// Prefix rendered as `launchMode(zoneName)`.
   String get prefix => '${launchMode.name}($zoneName)';
 
+  /// Prefixes every line of [message] with this context.
   String format(String message) => message.split('\n').map((line) => '$prefix: $line').join('\n');
 
-  const IsolateContext({
-    required this.launchMode,
-    required this.zoneName,
-  });
+  /// Creates an event context from an explicit launch mode and zone name.
+  const IsolateContext({required this.launchMode, required this.zoneName});
 
+  /// Creates a fallback context with unspecified launch mode and zone name.
   const IsolateContext.unspecified() : launchMode = LaunchModeType.unspecified, zoneName = 'unspecified';
 
+  /// Resolves context from [zone], falling back to [fallback].
+  ///
+  /// A scoped background launch mode overrides the runtime launch mode.
   factory IsolateContext.fromZone([Zone? zone, IsolateContext fallback = const IsolateContext.unspecified()]) {
     final current = zone ?? Zone.current;
     final provider = current[contextKey];
@@ -32,6 +43,7 @@ final class IsolateContext {
     );
   }
 
+  /// Trims [zoneName], replaces line breaks, and limits it to 20 characters.
   static String normalizeZoneName(String zoneName) {
     final normalizedZoneName = zoneName.trim().replaceAll(RegExp(r'[\r\n]+'), ' ');
     if (normalizedZoneName.isEmpty) {

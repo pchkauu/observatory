@@ -5,13 +5,24 @@ import 'package:observatory/src/feature/_common/infrastructure/log_sanitizer.dar
 import 'package:observatory/src/feature/_common/infrastructure/talker/managed_talker.dart';
 import 'package:talker/talker.dart' as talker;
 
+/// Logs sanitized Dio traffic while completing every interceptor exactly once.
 final class SafeDioLogInterceptor extends Interceptor {
+  /// Destination for prepared HTTP logs.
   final ManagedTalker log;
+
+  /// Controls optional header and body logging.
   final HttpLogSpec spec;
+
+  /// URL filter applied before formatting request data.
   final ObservationFilter filter;
+
+  /// Sanitizer used to detach and mask request and response fields.
   final LogSanitizer sanitizer;
+
+  /// Protected fallback for logging failures.
   final void Function(String) reportFailure;
 
+  /// Creates and registers a safe Dio log interceptor.
   SafeDioLogInterceptor({
     required this.log,
     required this.spec,

@@ -17,20 +17,34 @@ import 'package:sentry_dio/sentry_dio.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:talker_flutter/talker_flutter.dart' show TalkerRouteObserver;
 
+/// Owns logging integrations and lifecycle state for one isolate run.
 final class ObservatoryRuntime {
   // A Flutter binding survives close. Reuse its zone when Observatory created it.
   static Zone? _bindingZone;
   static ObservatoryRuntime? _bindingRuntime;
 
+  /// Immutable settings used by this runtime.
   final Config config;
+
+  /// Startup launch mode and default zone name.
   final IsolateContext isolate;
+
+  /// Clock used to timestamp logs and evaluate deduplication windows.
   final ObservationClock clock;
+
+  /// Zone that receives protected console output from the managed logger.
   final Zone parentZone = Zone.current;
+
+  /// Optional Sentry initializer used to replace SDK startup in tests.
   final Future<void> Function(SentryIncidentSink, {required LaunchModeType launchMode})? initializeSentry;
   final Completer<void> _initialized = Completer<void>();
   final Map<Dio, _DioAttachment> _attachments = Map.identity();
   final Set<Future<void>> _pending = {};
+
+  /// Sanitizer shared by local and remote output paths.
   late final LogSanitizer sanitizer = LogSanitizer(config.redaction);
+
+  /// Talker instance shared by every connected log source.
   late final ManagedTalker talker = ManagedTalker(
     clock: clock,
     context: currentContext,
@@ -40,6 +54,8 @@ final class ObservatoryRuntime {
     output: _output,
     reportFailure: reportFailure,
   );
+
+  /// Sentry adapter that prepares, sanitizes, and deduplicates incidents.
   late final SentryIncidentSink sink = SentryIncidentSink(
     spec: config.sentry,
     history: talker,
@@ -48,10 +64,14 @@ final class ObservatoryRuntime {
     context: currentContext,
     reportFailure: reportFailure,
   );
+
+  /// Navigation observers configured for the detected launch mode.
   late final List<NavigatorObserver> navigatorObservers = List.unmodifiable([
     if (isolate.launchMode == LaunchModeType.foreground && sentryActive) SentryNavigatorObserver(),
     TalkerRouteObserver(talker),
   ]);
+
+  /// Root logging zone used by [run] and callbacks entering from outside it.
   late final Zone zone;
   late DebugPrintCallback _previousPrint;
   late DebugPrintCallback _printHook;
@@ -61,7 +81,11 @@ final class ObservatoryRuntime {
   bool Function(Object, StackTrace)? _platformHook;
   BlocObserver? _previousBloc;
   late BlocObserver _blocHook;
+
+  /// Whether local logging and integrations completed initialization.
   bool started = false;
+
+  /// Whether this runtime successfully initialized and owns Sentry.
   bool sentryActive = false;
   bool _ownsSentry = false;
   bool _closed = false;
@@ -69,6 +93,9 @@ final class ObservatoryRuntime {
   bool _reporting = false;
   Future<void>? _closeFuture;
 
+  /// Creates an unstarted runtime.
+  ///
+  /// Throws [ArgumentError] for invalid history, Sentry, or launch-mode values.
   ObservatoryRuntime({required this.config, required this.isolate, required this.clock, this.initializeSentry}) {
     if (config.historyLimit < 0) throw ArgumentError.value(config.historyLimit, 'historyLimit');
     if (isolate.launchMode == LaunchModeType.unspecified) {
@@ -77,8 +104,12 @@ final class ObservatoryRuntime {
     config.sentry.validate();
   }
 
+  /// Resolves launch mode and zone name at the current event origin.
   IsolateContext currentContext() => IsolateContext.fromZone(Zone.current, isolate);
 
+  /// Initializes integrations and executes [body] in the runtime zone.
+  ///
+  /// Errors from [body] are recorded and returned with their original stack.
   Future<T> run<T>(FutureOr<T> Function() body) {
     final result = Completer<T>();
     var ownsBindingZone = false;
@@ -156,6 +187,9 @@ final class ObservatoryRuntime {
     return result.future;
   }
 
+  /// Runs [body] in a child zone named [zoneName].
+  ///
+  /// Throws [StateError] after shutdown begins.
   T runInZone<T>(String zoneName, T Function() body) {
     if (_closed || _closing) throw StateError('Observatory is closed');
     // Keep the current async/error zone when nested; callbacks outside it enter the runtime zone.
@@ -165,6 +199,7 @@ final class ObservatoryRuntime {
 
   void _output(String message) => parentZone.print(message);
 
+  /// Writes an internal telemetry failure without re-entering capture.
   void reportFailure(String message) {
     if (_reporting) return;
     _reporting = true;
@@ -257,6 +292,7 @@ final class ObservatoryRuntime {
     started = true;
   }
 
+  /// Records [observation] locally and sends it when Sentry is active.
   Future<void> capture(Observation observation) async {
     if (_closed) return;
     try {
@@ -267,6 +303,7 @@ final class ObservatoryRuntime {
     await useSink((sink) => sink.capture(observation));
   }
 
+  /// Runs [action] against active Sentry and tracks it for orderly shutdown.
   Future<void> useSink(Future<void> Function(SentryIncidentSink) action) {
     if (!sentryActive || _closed || _closing) return Future.value();
     final operation = () async {
@@ -281,6 +318,10 @@ final class ObservatoryRuntime {
     return operation;
   }
 
+  /// Attaches one safe logging interceptor and optional Sentry adapter to [dio].
+  ///
+  /// Repeated calls for the same client are ignored. Calls during or after
+  /// shutdown throw [StateError].
   void attachTo(Dio dio) {
     if (_closed || _closing) throw StateError('Observatory is closed');
     if (_attachments.containsKey(dio)) return;
@@ -298,6 +339,7 @@ final class ObservatoryRuntime {
     _attachments[dio] = _DioAttachment(interceptor, adapter, transformer, dio.httpClientAdapter, dio.transformer);
   }
 
+  /// Restores owned handlers, detaches clients, and closes pending resources.
   Future<void> close() {
     _closing = true;
     return _closeFuture ??= _close();

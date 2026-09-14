@@ -9,15 +9,9 @@ Future<void> main() async {
     config: Config(
       filter: ObservationFilter(
         enabled: true,
-        excludedLogs: const [
-          'Heartbeat tick',
-        ],
-        excludedHttpUrls: [
-          RegExp(r'/health$'),
-        ],
-        excludedBlocTypes: const [
-          'HydratedBloc',
-        ],
+        excludedLogs: const ['Heartbeat tick'],
+        excludedHttpUrls: [RegExp(r'/health$')],
+        excludedBlocTypes: const ['HydratedBloc'],
       ),
       httpLog: const HttpLogSpec.detailed(),
       sentry: SentrySpec(
@@ -43,14 +37,9 @@ Future<void> main() async {
     ),
     body: () async {
       await Observatory.bindUser(id: 'user-42', email: 'qa@example.com');
-      await Observatory.bindDevice(
-        connectedDeviceId: 'device-7',
-        platformDeviceId: 'pixel-8',
-      );
+      await Observatory.bindDevice(connectedDeviceId: 'device-7', platformDeviceId: 'pixel-8');
 
-      final dio = Dio(
-        BaseOptions(baseUrl: 'https://api.example.com'),
-      );
+      final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
       Observatory.attachTo(dio);
 
       runApp(ExampleApp(dio: dio));
@@ -61,19 +50,14 @@ Future<void> main() async {
 class ExampleApp extends StatelessWidget {
   final Dio dio;
 
-  const ExampleApp({
-    required this.dio,
-    super.key,
-  });
+  const ExampleApp({required this.dio, super.key});
 
   @override
   Widget build(BuildContext context) {
     return ObservatoryWidget(
       child: MaterialApp(
         navigatorObservers: Observatory.navigatorObservers,
-        home: ExampleHome(
-          dio: dio,
-        ),
+        home: ExampleHome(dio: dio),
       ),
     );
   }
@@ -82,10 +66,7 @@ class ExampleApp extends StatelessWidget {
 class ExampleHome extends StatelessWidget {
   final Dio dio;
 
-  const ExampleHome({
-    required this.dio,
-    super.key,
-  });
+  const ExampleHome({required this.dio, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -95,13 +76,8 @@ class ExampleHome extends StatelessWidget {
         actions: [
           IconButton(
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (context) => const ObservatoryLogScreen(
-                    appBarTitle: 'Logs',
-                  ),
-                ),
-              );
+              Navigator.of(context)
+                  .push(MaterialPageRoute<void>(builder: (context) => const ObservatoryLogScreen(appBarTitle: 'Logs')));
             },
             icon: const Icon(Icons.bug_report_outlined),
           ),
@@ -117,15 +93,9 @@ class ExampleHome extends StatelessWidget {
             child: const Text('Record info'),
           ),
           const SizedBox(height: 8),
-          FilledButton(
-            onPressed: _syncProfile,
-            child: const Text('Catch and capture'),
-          ),
+          FilledButton(onPressed: _syncProfile, child: const Text('Catch and capture')),
           const SizedBox(height: 8),
-          FilledButton(
-            onPressed: _pingBackend,
-            child: const Text('HTTP with capture'),
-          ),
+          FilledButton(onPressed: _pingBackend, child: const Text('HTTP with capture')),
         ],
       ),
     );
@@ -135,12 +105,7 @@ class ExampleHome extends StatelessWidget {
     try {
       throw const FormatException('invalid profile payload');
     } on Object catch (error, stackTrace) {
-      await Observatory.capture(
-        LogLevel.error,
-        'Profile sync failed',
-        error: error,
-        stackTrace: stackTrace,
-      );
+      await Observatory.capture(LogLevel.error, 'Profile sync failed', error: error, stackTrace: stackTrace);
     }
   }
 
@@ -148,12 +113,7 @@ class ExampleHome extends StatelessWidget {
     try {
       await dio.get<void>('/v1/profile');
     } on Object catch (error, stackTrace) {
-      await Observatory.capture(
-        LogLevel.error,
-        'Profile request failed',
-        error: error,
-        stackTrace: stackTrace,
-      );
+      await Observatory.capture(LogLevel.error, 'Profile request failed', error: error, stackTrace: stackTrace);
     }
   }
 }
