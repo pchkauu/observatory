@@ -14,9 +14,13 @@ import '../support.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  tearDown(Observatory.close);
+  tearDown(() async {
+    await Observatory.close();
+    debugDefaultTargetPlatformOverride = null;
+  });
 
   test('print, debugPrint, direct Talker and nested async zones share history without recursion', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
     final console = <String>[];
     await runZoned(
       () => Observatory.run<void>(
@@ -49,6 +53,31 @@ void main() {
     Observatory.talker.info('outside child zone');
     expect(console.last, 'foreground(main): outside child zone');
   });
+
+  for (final platform in [TargetPlatform.iOS, TargetPlatform.macOS]) {
+    test('${platform.name} console output uses the Talker developer channel once', () async {
+      debugDefaultTargetPlatformOverride = platform;
+      final console = <String>[];
+      final developerMessages = <String>[];
+      ObservatoryRuntime? runtime;
+      try {
+        await runZoned(() async {
+          runtime = ObservatoryRuntime(
+            config: const Config(),
+            isolate: const IsolateContext(launchMode: LaunchModeType.foreground, zoneName: 'main'),
+            clock: MutableClock(),
+            developerLog: developerMessages.add,
+          );
+          await runtime!.run<void>(() => runtime!.talker.info('first\nsecond'));
+        }, zoneSpecification: ZoneSpecification(print: (_, _, _, message) => console.add(message)));
+        expect(developerMessages, ['foreground(main): first\nforeground(main): second']);
+        expect(console, isEmpty);
+        expect(runtime!.talker.history, hasLength(1));
+      } finally {
+        await runtime?.close();
+      }
+    });
+  }
 
   test('queued debug messages retain origin across zones and every wrapped line has context', () async {
     await Observatory.run<void>(
